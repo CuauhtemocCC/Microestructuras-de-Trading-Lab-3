@@ -26,7 +26,7 @@ evo_c_c = dt.evo_c_c
 evo_c_m = dt.evo_c_m
 evo_c_e = dt.evo_c_e
 
-dt.metricas_c
-dt.metricas_m
-dt.metricas_e
+metricas_c = dt.metricas_c
+metricas_m = dt.metricas_m
+metricas_e =dt.metricas_e
 
