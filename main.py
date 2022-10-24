@@ -30,3 +30,4 @@ metricas_c = dt.metricas_c
 metricas_m = dt.metricas_m
 metricas_e =dt.metricas_e
 
+BF = fn.f_be_de(dt.datos4)
