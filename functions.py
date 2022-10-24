@@ -236,7 +236,124 @@ def estadisticas_mad(tabla1,tabla2):
 
     return tabla_desempeño
 
+def f_be_de(tabla):
+    winners = tabla[tabla.profit > 0]
+    winners = winners.reset_index()
+    winners["Ratio"] = winners["profit"] / abs(winners["profit_acum"])
+    
+    list_date_w = winners.closetime.to_list()
+    list_ord_w = winners.order.to_list()
+    list_profit_w = winners.profit.to_list()
+    
+    n_occ = []
+    occu = []
+    i = 0
+    while i < len(list_date_w):
+        datos5 = tabla[(tabla.opentime <= list_date_w[i]) & (tabla.closetime > list_date_w[i])]
+        datos5['CTime_Anchor'] = pd.Timestamp(list_date_w[i])
+        datos5['Order_Anchor'] = list_ord_w[i]
+        datos5['profit_Anchor'] = list_profit_w[i]
+        occu.append(datos5)
+        n_occ.append(len(datos5))
+        i = i+1
+    occu_df = pd.concat(occu, ignore_index=True)
+    
+    occu_df['CTime_Anchor_2'] = np.zeros(len(occu_df['CTime_Anchor']))
+    for i in range(len(occu_df['CTime_Anchor'])):
+        occu_df['CTime_Anchor_2'][i] = occu_df['CTime_Anchor'][i].strftime("%Y-%m-%d %H:%M")
+        
+    precios = pd.read_csv("files/prices.csv")
+    precios['time'] = pd.to_datetime(precios['time'], format='%Y-%m-%d %H:%M')
+    for i in range(len(precios['time'])):
+        precios['time'][i] = precios['time'][i].strftime("%Y-%m-%d %H:%M")
+        
+    best_winners = []
+    worse_losers = []
+    for i in range(len(list_ord_w)):
+        datos8 = occu_df[occu_df["Order_Anchor"] == list_ord_w[i]]
+        datos8["Flag_O"] = i+1
+        datos8_w = datos8[datos8["profit"]>0]
+        datos8_l = datos8[datos8["profit"]<0]
+        bw = datos8_w[datos8_w["profit"] == datos8_w["profit"].max()]
+        wl = datos8_l[datos8_l["profit"] == datos8_l["profit"].min()]
+        bw = bw[['symbol', 'size','type','profit','profit_acum','CTime_Anchor_2','Flag_O']]
+        wl = wl[['symbol', 'size','type','profit','profit_acum','CTime_Anchor_2','Flag_O']]
 
+        best_winners.append(bw)
+        worse_losers.append(wl)
+    
+    df_bw = pd.concat(best_winners)
+    df_bw = df_bw.reset_index()
+    df_bw["Price"] = np.zeros(len(df_bw["size"]))
+    df_wl = pd.concat(worse_losers)
+    df_wl = df_wl.reset_index()
+    df_wl["Price"] = np.zeros(len(df_wl["size"]))
+    
+    dict_sup = {'symbol': np.zeros(len(best_winners)), 'size': np.zeros(len(best_winners)),
+          'type': np.zeros(len(best_winners)), 'profit': np.zeros(len(best_winners)),
+          'CTime_Anchor_2': np.zeros(len(best_winners)), 'Flag_O': np.zeros(len(best_winners)),
+           'Prices': np.zeros(len(best_winners)),'profit_acum': np.zeros(len(best_winners))}
+
+    df_sup1 = pd.DataFrame(dict_sup)
+    df_sup2 = pd.DataFrame(dict_sup)
+
+    y=np.arange(1,len(best_winners)+1)
+
+    df_sup1["Flag_O"] = y
+    df_sup2["Flag_O"] = y
+    
+    k = 0
+    while k < len(df_bw["Flag_O"]):
+        for i in range(len(df_sup1["Flag_O"])):
+            if df_sup1["Flag_O"][i] == df_bw["Flag_O"][k]:
+                df_sup1["symbol"][i] = df_bw["symbol"][k]
+                df_sup1["size"][i] = df_bw["size"][k]
+                df_sup1["type"][i] = df_bw["type"][k]
+                df_sup1["profit"][i] = df_bw["profit"][k]
+                df_sup1["CTime_Anchor_2"][i] = df_bw["CTime_Anchor_2"][k]
+                df_sup1["profit_acum"][i] = df_bw["profit_acum"][k]
+            else:
+                pass
+        k = k+1
+
+    m = 0
+    while m < len(df_wl["Flag_O"]):
+        for i in range(len(df_sup2["Flag_O"])):
+            if df_sup2["Flag_O"][i] == df_wl["Flag_O"][m]:
+                df_sup2["symbol"][i] = df_wl["symbol"][m]
+                df_sup2["size"][i] = df_wl["size"][m]
+                df_sup2["type"][i] = df_wl["type"][m]
+                df_sup2["profit"][i] = df_wl["profit"][m]
+                df_sup2["CTime_Anchor_2"][i] = df_wl["CTime_Anchor_2"][m]
+                df_sup2["profit_acum"][i] = df_wl["profit_acum"][m]
+            else:
+                pass
+        m = m+1
+
+    final_dict = {'Ocurrencias': {'Cantidad': len(df_sup1["size"])}}
+    for i in range(len(df_sup2["size"])):
+        final_dict['Ocurrencias'][f'Ocurrencia {i + 1}'] = {
+                        'timestamp': list_date_w[i],
+            "Operaciones": {
+            "Ganadoras": {
+                "Instrumento": df_sup1.iloc[i,0],
+                "Volumen": df_sup1.iloc[i,1],
+                "Sentido": df_sup1.iloc[i,2],
+                "Profit_ganadora": df_sup1.iloc[i,3]
+            },
+            "Perdedoras": {
+                "Instrumento": df_sup2.iloc[i,0],
+                "Volumen": df_sup2.iloc[i,1],
+                "Sentido": df_sup2.iloc[i,2],
+                "Profit_ganadora": df_sup2.iloc[i,3]
+            }
+        },
+            'ratio_cp_profit_acm': round(abs(df_sup2.iloc[i,3] / df_sup2.iloc[i,7]), 2),
+            'ratio_cg_profit_acm': round(abs(df_sup1.iloc[i,3] / df_sup1.iloc[i,7]), 2),
+            'ratio_cp_cg': round(abs(df_sup2.iloc[i,3] / df_sup1.iloc[i,3]), 2)
+        }
+        
+    return final_dict
 
 
 
