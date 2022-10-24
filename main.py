@@ -30,4 +30,10 @@ metricas_c = dt.metricas_c
 metricas_m = dt.metricas_m
 metricas_e =dt.metricas_e
 
-BF = fn.f_be_de(dt.datos4)
+vs.plot_pie_graph(dt.df_2_tabla_c)
+vs.plot_pie_graph(dt.df_2_tabla_e)
+vs.plot_pie_graph(dt.df_2_tabla_m)
+
+vs.plot_DDC_DUC(dt.evo_c_c)
+vs.plot_DDC_DUC(dt.evo_c_e)
+vs.plot_DDC_DUC(dt.evo_c_m)
